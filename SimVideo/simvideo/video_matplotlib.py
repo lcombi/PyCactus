@@ -69,6 +69,24 @@ def horizon_options(parser, color='k', edgecolor='w', alpha=1):
       help="Lapse on apparent horizon (used with --ah-from-lapse)")
   return parser
 #
+def mass_frac_options(parser, levels=[0.3,0.5,0.9], mfrac_color='g',
+                      bulk_color='b'):
+  parser = parser.add_argument_group('Mass fraction contour options')
+  parser.add_argument('--mfrac-show', action='store_true', 
+      help="Plot isodensity lines containing given mass fractions.")
+  parser.add_argument('--mfrac-outside', action='store_true', 
+      help="mass fractions defined by mass outside instead inside.")
+  parser.add_argument('--mfrac-levels', type=float,
+    nargs='*', default=levels,
+    help="Mass fractions to plot (default: %(default)s).")
+  parser.add_argument('--mfrac-color', default=mfrac_color,
+    help="Color for mass fraction contour line (default: %(default)s)")
+  parser.add_argument('--bulk-show', action='store_true', 
+      help='Plot "bulk" boundary.')
+  parser.add_argument('--bulk-color', default=bulk_color,
+    help='Color for "bulk" contour line (default: %(default)s)')
+  return parser
+#
 
 
 
@@ -311,7 +329,34 @@ class VideoBNSMatplotlib(VideoMatplotlib):
   def plot_ah_grid(self, grid, ahs, units=1):
     for ah,ax in zip(ahs, grid):
       self.plot_ah(ax, ah, units=units)
+  def load_mass_frac_contours(self, sd, it, udens=1):
+    opt = self.opt
+    lvl, blvl = [], None
+    if (opt.mfrac_show or opt.bulk_show):
+      fracs = opt.mfrac_levels if opt.mfrac_show else []
+      lvl, blvl = cactus_hist1d.load_mass_frac_contours(sd, it, 
+                     mfracs=fracs, 
+                     frac_outside=opt.mfrac_outside)
+      lvl, blvl = lvl/udens, blvl/udens
     #
+    return lvl, blvl
+  #
+  def plot_mass_frac_contours(self, axes, rho, rho_cont, 
+                              lw=1, lw_bulk=2, **kwargs):
+    opt, viz = self.opt, self.viz
+    if opt.mfrac_show and (len(rho_cont[0]) > 0):
+      viz.plot_contour(rho, levels=rho_cont[0], colors=opt.mfrac_color, 
+                       lw=lw, axes=axes, **kwargs)
+    #  
+    if opt.bulk_show and (rho_cont[1] is not None):
+      viz.plot_contour(rho, levels=[rho_cont[1]], colors=opt.bulk_color, 
+                       lw=lw_bulk, axes=axes, **kwargs)
+    #
+  #
+  def plot_mass_frac_contours_grid(self, grid, rho, rho_cont, **kwargs):
+    for r,ax in zip(rho, grid):
+      self.plot_mass_frac_contours(ax, r, rho_cont, **kwargs)
+     #
   #  
 #
   
